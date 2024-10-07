@@ -1,0 +1,17 @@
+__default__:
+  name: idpp
+  account: idpp
+  time: "12:00:00"
+  partition: shared
+  nodes: 1
+  ntasks: 8  # 64/8 cores
+
+train_retip:
+  partition: slurm
+  nodes: 1
+  ntasks: 8
+
+retip:
+  partition: slurm
+  nodes: 1
+  ntasks: 8

@@ -1,0 +1,48 @@
+# database chunking
+db:
+  filename: test_batch_size-316
+  chunk_size: 25
+
+# general adduct types
+adducts: ["[M+H]+", "[M-H]-"]
+
+# specify desired tools
+tools: ["deepccs", "graffms", "sigmaccs", "darkchem", "c3sdb", "rtp"]
+
+# repo locations
+retip_data: /qfs/projects/idpp/properties/retip_data
+rtp_path: /qfs/projects/idpp/repos/rtp
+deepccs_path: /qfs/projects/idpp/repos/DeepCCS
+sigmaccs_path: /qfs/projects/idpp/repos/SigmaCCSNew
+darkchem_path: /qfs/projects/idpp/data/darkchem_networks
+c3sdb_path: /qfs/projects/idpp/repos/c3sdb
+cfmid_path: /qfs/projects/idpp/repos/cfmid/cfmid.sif
+
+# cfm-id params
+singularity-args: "--bind /qfs/projects/idpp/data/test_10:$HOME"
+use-singularity: TRUE
+
+# web server has many available adducts; CLI/docker only 2
+cfmid_adducts: ["[M+H]+", "[M-H]-"]
+
+# graff-ms params
+collision_energy: [10.0, 20.0, 40.0]
+graffms:
+  repo_path: /qfs/projects/idpp/repos/graff-ms
+  input_path: 
+  output_path:
+  batch_size: 512
+  gpus: 0  # 1
+  precision: 32
+  num_workers: 8
+  instrument: Thermo Finnigan Elite Orbitrap
+  has_isotopes: 0
+  min_probability: 1.e-4
+  min_mz: 50
+  subsample: 0
+  seed: 0
+  ignore_errors: 1
+
+# rtp params
+fp_size: 2048
+rtp_model_path: /qfs/projects/idpp/data/rtp_models/test_SVM.pkl
