@@ -1,0 +1,35 @@
+name: rtp
+channels:
+  - defaults
+  - conda-forge
+  - anaconda
+  - rdkit
+dependencies:
+  - _libgcc_mutex
+  - _openmp_mutex
+  - bzip2
+  - ca-certificates
+  - ld_impl_linux-64
+  - libffi
+  - libgcc-ng
+  - libgomp
+  - libstdcxx-ng
+  - libuuid
+  - ncurses
+  - numpy
+  - openssl
+  - pip
+  - python=3.10.*
+  - readline
+  - rdkit
+  - setuptools
+  - sqlite
+  - tk
+  - tzdata
+  - wheel
+  - xz
+  - zlib
+  - pip:
+      - joblib==1.4.*
+      - six==1.16.*
+prefix: /people/imal967/.conda/envs/rtp

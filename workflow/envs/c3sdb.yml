@@ -1,0 +1,15 @@
+name: c3sdb
+channels:
+  - conda-forge
+  - rdkit
+  - anaconda
+dependencies:
+  - python=3.12
+  - pandas
+  - pip
+  - pip:
+    - rdkit==2023.9.4
+    - requests==2.31.0
+    - scikit-learn==1.4.0
+    - numpy==1.26.3
+    - matplotlib==3.8.2

@@ -1,0 +1,571 @@
+ruleorder: format_cfmid_input > run_cfmid > combine_cfmid_output
+
+
+# imports
+from itertools import product
+from os.path import basename, join, sep, splitext
+import pandas as pd
+
+# ============================================================
+# <--------------- FULL WORKFLOW --------------------------->
+# ============================================================
+
+ADDUCTS = config["adducts"]
+TOOLS = [t.lower() for t in config["tools"]]
+
+database = glob_wildcards("{filename}.tsv")
+filenames = [f for f in database.filename if sep not in f]
+
+# set memory limit based on available threads
+def get_mem_mb(wildcards, threads):
+    return threads * 150000
+
+
+def define_input_from_tools(wildcards):
+    input_list = list()
+
+    if "darkchem" in TOOLS:
+        input_list += expand(join("{db}", "ccs", "darkchem", "{db}.tsv"), db=filenames)
+
+    if ("c3sdb" in TOOLS) or ("c3" in TOOLS) or ("ccsbase" in TOOLS):
+        input_list += expand(join("{db}", "ccs", "c3sdb", "{db}.tsv"), db=filenames)
+
+    if "deepccs" in TOOLS:
+        input_list += expand(
+            join("{db}", "ccs", "deepccs", "{db}.tsv"),
+            db=filenames,
+        )
+
+    if "sigmaccs" in TOOLS:
+        input_list += expand(
+            join("{db}", "ccs", "sigmaccs", "{db}.tsv"),
+            db=filenames,
+        )
+
+    if "retip" in TOOLS:
+        input_list += expand(
+            join("{db}", "retention_time", "retip", "{db}.tsv"),
+            db=filenames,
+        )
+
+    if "rtp" in TOOLS:
+        input_list += expand(
+            join("{db}", "retention_time", "rtp", "{db}.tsv"),
+            db=filenames,
+        )
+
+    if ("cfmid" in TOOLS) or ("cfm-id" in TOOLS):
+        input_list += expand(join("{db}", "msms", "cfm-id", "{db}.tsv"), db=filenames)
+
+    if ("graffms" in TOOLS) or ("graff-ms" in TOOLS):
+        input_list += expand(
+            join("{db}", "msms", "graff-ms", "{db}.tsv"),
+            db=filenames,
+        )
+
+    return input_list
+
+
+# Clean up outfiles after successful runs
+onsuccess:
+    shell("mv *.out ../_outfiles/.")
+    print("Workflow finished successfully.")
+
+
+rule all:
+    input:
+        define_input_from_tools,
+
+
+# ============================================================
+# <--------------- HANDLE DB PARSING ------------------------>
+# ============================================================
+
+
+# fetch and chunk data
+checkpoint fetch_data:
+    input:
+        "{db}.tsv",
+    output:
+        directory(join("{db}", "db")),
+    script:
+        join("scripts", "fetch_data.py")
+
+
+# input function to fetch all chunk wildcards
+def chunked_input(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    data = expand(
+        join("{db}", "db", "{n}.tsv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return data
+
+
+# ============================================================
+# <--------------- CCS PREDICTION --------------------------->
+# ============================================================
+
+
+# ------------------------------------------------------------
+#               DeepCCS
+# ------------------------------------------------------------
+rule format_deepccs_input:
+    input:
+        join("{db}", "db", "{n}.tsv"),
+    output:
+        temp(join("{db}", "ccs", "deepccs", "input", "{db}__{n}.csv")),
+    group:
+        "format"
+    script:
+        join("scripts", "format_deepccs_input.py")
+
+
+# get install path of deepccs
+DEEPCCS = join(config["deepccs_path"], "interface", "command_line_tool.py")
+DEEPCCS_MODEL_DIR = join(config["deepccs_path"], "saved_models", "default")
+
+
+# sketch this out with deepccs
+rule run_deepccs:
+    input:
+        rules.format_deepccs_input.output[0],
+    output:
+        temp(join("{db}", "ccs", "deepccs", "output", "{db}__{n}.csv")),
+    shell:
+        "{DEEPCCS} predict -i {input[0]} -o {output[0]} -mp {DEEPCCS_MODEL_DIR} -ap {DEEPCCS_MODEL_DIR} -sp {DEEPCCS_MODEL_DIR}"
+
+
+def deepccs_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    output_files = expand(
+        join("{db}", "ccs", "deepccs", "output", "{db}__{n}.csv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return output_files
+
+
+rule combine_deepccs_output:
+    input:
+        files=deepccs_output_files,
+        data=chunked_input,
+    output:
+        join("{db}", "ccs", "deepccs", "{db}.tsv"),
+    script:
+        join("scripts", "combine_deepccs_output.py")
+
+
+# ------------------------------------------------------------
+#               SigmaCCS
+# ------------------------------------------------------------
+
+
+rule format_sigmaccs_input:
+    input:
+        join("{db}", "db", "{n}.tsv"),
+    output:
+        temp(join("{db}", "ccs", "sigmaccs", "input", "{db}__{n}.csv")),
+    group:
+        "format"
+    script:
+        join("scripts", "format_sigmaccs_input.py")
+
+
+rule run_sigmaccs:
+    input:
+        rules.format_sigmaccs_input.output[0],
+    output:
+        temp(join("{db}", "ccs", "sigmaccs", "output", "{n}.csv")),
+    envmodules:
+        "gcc/11.2.0",
+        "cuda/11.0",
+    conda:
+        "envs/sigmaccs.yml"
+    script:
+        join("scripts", "run_sigmaccs.py")
+
+
+def sigmaccs_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    output_files = expand(
+        join("{db}", "ccs", "sigmaccs", "output", "{n}.csv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return output_files
+
+
+rule combine_sigmaccs_output:
+    input:
+        files=sigmaccs_output_files,
+        data=chunked_input,
+    output:
+        join("{db}", "ccs", "sigmaccs", "{db}.tsv"),
+    script:
+        join("scripts", "combine_sigmaccs_output.py")
+
+
+# ------------------------------------------------------------
+#               DarkChem
+# ------------------------------------------------------------
+
+
+rule run_darkchem:
+    input:
+        join("{db}", "db", "{n}.tsv"),
+    output:
+        temp(join("{db}", "ccs", "darkchem", "output", "{db}__{n}.csv")),
+    conda:
+        "envs/darkchem.yml"
+    script:
+        join("scripts", "run_darkchem.py")
+
+
+def darkchem_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    output_files = expand(
+        join("{db}", "ccs", "darkchem", "output", "{db}__{n}.csv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return output_files
+
+
+rule combine_darkchem:
+    input:
+        files=darkchem_output_files,
+        data=chunked_input,
+    output:
+        join("{db}", "ccs", "darkchem", "{db}.tsv"),
+    script:
+        join("scripts", "combine_darkchem_output.py")
+
+
+# ------------------------------------------------------------
+#                c3sdb
+# ------------------------------------------------------------
+
+
+rule run_c3sdb:
+    input:
+        join("{db}", "db", "{n}.tsv"),
+    output:
+        temp(join("{db}", "ccs", "c3sdb", "output", "{db}__{n}.csv")),
+    conda:
+        "envs/c3sdb.yml"
+    script:
+        join("scripts", "run_c3sdb.py")
+
+
+def c3sdb_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    output_files = expand(
+        join("{db}", "ccs", "c3sdb", "output", "{db}__{n}.csv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return output_files
+
+
+rule combine_c3sdb:
+    input:
+        files=c3sdb_output_files,
+        data=chunked_input,
+    output:
+        join("{db}", "ccs", "c3sdb", "{db}.tsv"),
+    script:
+        join("scripts", "combine_c3sdb_output.py")
+
+
+# ============================================================
+# <--------------- RETENTION TIME PREDICTION ---------------->
+# ============================================================
+
+# ------------------------------------------------------------
+#               ReTip
+# ------------------------------------------------------------
+
+
+# rule format_retip_input:
+#     input:
+#         join("{db}", "db", "{n}.tsv"),
+#     output:
+#         temp(join("{db}", "retention_time", "smiles", "{n}.xlsx")),
+#     group:
+#         "format"
+#     script:
+#         join("scripts", "format_retip_input.py")
+
+
+# rule train_retip:
+#     input:
+#         data=join(config["retip_data"], "training", "{adduct}_{lc}.xlsx"),
+#     output:
+#         model=join(config["retip_data"], "model", "{adduct}_{lc}.rds"),
+#         training=join(config["retip_data"], "training", "output", "{adduct}_{lc}.xlsx"),
+#     conda:
+#         "idpp"
+#     envmodules:
+#         "R/4.2.2",
+#         "java/1.8.0_31",
+#     resources:
+#         # tmpdir="/scratch",
+#         mem_mb=get_mem_mb,
+#         disk_mb=100000,
+#     script:
+#         join("scripts", "retip_model.R")
+
+
+# rule run_retip:
+#     input:
+#         model=rules.train_retip.output.model,
+#         data=rules.format_retip_input.output[0],
+#         training=rules.train_retip.output.training,
+#     output:
+#         result=join(
+#             "{db}", "retention_time", "retip", "output", "{n}__{adduct}_{lc}.xlsx"
+#         ),
+#     conda:
+#         "idpp"
+#     envmodules:
+#         "R/4.2.2",
+#         "java/1.8.0_31",
+#     resources:
+#         # tmpdir="/scratch",
+#         mem_mb=get_mem_mb,
+#         disk_mb=100000,
+#     script:
+#         join("scripts", "run_retip.R")
+
+
+# def retip_output(wildcards):
+#     chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+#     output_files = expand(
+#         join("{db}", "retention_time", "retip", "output", "{n}__{adduct}_{lc}.xlsx"),
+#         db=wildcards.db,
+#         n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+#         adduct=ADDUCTS,
+#         lc=["rp", "hilic"],
+#     )
+#     return output_files
+
+
+# rule combine_retip_output:
+#     input:
+#         retip_output,
+#     output:
+#         join("{db}", "retention_time", "retip", "{db}.tsv"),
+#     script:
+#         join("scripts", "combine_retip_output.py")
+
+
+# ------------------------------------------------------------
+#                            rtp
+# ------------------------------------------------------------
+
+
+rule run_rtp:
+    input:
+        join("{db}", "db", "{n}.tsv"),
+    output:
+        temp(join("{db}", "retention_time", "rtp", "output", "{db}__{n}.csv")),
+    conda:
+        "idpp"
+    script:
+        join("scripts", "run_rtp.py")
+
+
+def rtp_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    output_files = expand(
+        join("{db}", "retention_time", "rtp", "output", "{db}__{n}.csv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return output_files
+
+
+rule combine_rtp_output:
+    input:
+        files=rtp_output_files,
+        data=chunked_input,
+    output:
+        join("{db}", "retention_time", "rtp", "{db}.tsv"),
+    script:
+        join("scripts", "combine_rtp_output.py")
+
+
+# ============================================================
+# <--------------- MS/MS PREDICTION ------------------------->
+# ============================================================
+
+# ------------------------------------------------------------
+#               CFM-ID 4.0
+# ------------------------------------------------------------
+
+
+rule format_cfmid_input:
+    input:
+        data=join("{db}", "db", "{n}.tsv"),
+    output:
+        temp(
+            expand(
+                join(
+                    "{{db}}",
+                    "msms",
+                    "cfm-id",
+                    "input",
+                    "{{db}}__{{n}}",
+                    "{adduct}.txt",
+                ),
+                adduct=[a for a in ADDUCTS if a in config["cfmid_adducts"]],
+            )
+        ),
+    params:
+        allowed_adducts=[a for a in ADDUCTS if a in config["cfmid_adducts"]],
+    group:
+        "format"
+    script:
+        join("scripts", "format_cfmid_input.py")
+
+
+checkpoint run_cfmid:
+    input:
+        join("{db}", "msms", "cfm-id", "input", "{db}__{n}", "{adduct}.txt"),
+    output:
+        dir=directory(join("{db}", "msms", "cfm-id", "output", "{db}__{n}", "{adduct}")),
+    benchmark:
+        join(".benchmarks/run_cfmid/{db}__{n}__{adduct}.tsv")
+    singularity:
+        config["cfmid_path"]
+    shell:
+        """
+        mkdir -p {output.dir}
+        cfm-predict {input[0]} 0.001 /trained_models_cfmid4.0/{wildcards.adduct}/param_output.log /trained_models_cfmid4.0/{wildcards.adduct}/param_config.txt 0 {output.dir}
+        """
+
+
+def cfmid_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    n = glob_wildcards(join(chunk_dir, "{n}.tsv")).n
+
+    output_files = list()
+    for d, n, a in product(
+        [wildcards.db], n, [a for a in ADDUCTS if a in config["cfmid_adducts"]]
+    ):
+        data_dir = str(checkpoints.run_cfmid.get(db=d, adduct=a, n=n).output)
+        adduct_ids = glob_wildcards(join(data_dir, "{adduct_id}.log")).adduct_id
+        output_files += expand(join(data_dir, "{adduct_id}.log"), adduct_id=adduct_ids)
+    return output_files
+
+
+# format cfm-id results into arrays from txt files
+rule combine_cfmid_output:
+    input:
+        files=cfmid_output_files,
+        data=chunked_input,
+    output:
+        tsv=join("{db}", "msms", "cfm-id", "{db}.tsv"),
+    script:
+        join("scripts", "combine_cfmid_output.py")
+
+
+# ------------------------------------------------------------
+#               GrAFF-MS
+# ------------------------------------------------------------
+
+
+rule format_graffms_input:
+    input:
+        data=join("{db}", "db", "{n}.tsv"),
+    output:
+        tsv=temp(join("{db}", "msms", "graff-ms", "input", "{n}.tsv")),
+    group:
+        "format"
+    script:
+        join("scripts", "format_graff-ms_input.py")
+
+
+rule run_graffms:
+    input:
+        data=rules.format_graffms_input.output.tsv,
+    output:
+        temp(join("{db}", "msms", "graff-ms", "output", "{n}.tsv")),
+    params:
+        script=join(workflow.basedir, "scripts", "run_graff-ms.py"),
+        model=join(
+            config["graffms"]["repo_path"],
+            "lightning_logs",
+            "graff-ms",
+            "version_0",
+            "checkpoints",
+            "epoch=96-step=27257.ckpt",
+        ),
+        repo_path=config["graffms"]["repo_path"],
+    conda:
+        "graff-ms"
+    envmodules:
+        "gcc/11.2.0",
+    shell:
+        """
+        python -u {params.script} {params.model} {input.data} {output[0]} --gpus {config[graffms][gpus]} --repo_path {params.repo_path}
+        """
+
+
+def graffms_output_files(wildcards):
+    chunk_dir = checkpoints.fetch_data.get(**wildcards).output[0]
+    output_files = expand(
+        join("{db}", "msms", "graff-ms", "output", "{n}.tsv"),
+        db=wildcards.db,
+        n=glob_wildcards(join(chunk_dir, "{n}.tsv")).n,
+    )
+    return output_files
+
+
+rule combine_graffms_output:
+    input:
+        files=graffms_output_files,
+        data=chunked_input,
+    output:
+        join("{db}", "msms", "graff-ms", "{db}.tsv"),
+    conda:
+        "graff-ms"
+    script:
+        join("scripts", "combine_graff-ms_output.py")
+
+
+# ------------------------------------------------------------
+#               ICEBERG
+# ------------------------------------------------------------
+
+
+# ------------------------------------------------------------
+#               MassFormer
+# ------------------------------------------------------------
+
+
+# ============================================================
+# <--------------- IR PREDICTION ---------------------------->
+# ============================================================
+
+# ------------------------------------------------------------
+#               Chemprop-IR
+# ------------------------------------------------------------
+
+
+# chemprop-ir?
+rule chemprop:
+    input:
+        join("input", "smiles", "{db}.csv"),
+    output:
+        join("{db}", "ir", "{db}"),
+    shell:
+        "echo {input[0]}"
+        # <--- insert chemprop-ir code here --->
+
+
+# ============================================================
+# <--------------- COMBINE RESULTS -------------------------->
+# ============================================================
