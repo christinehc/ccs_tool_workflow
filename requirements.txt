@@ -1,0 +1,30 @@
+# ms-pred requirements
+pathos
+hyperopt
+ray[air]
+CairoSVG
+git+https://github.com/ray-project/ray_lightning#ray_lightning
+ipdb
+omegaconf
+torch_geometric==2.2.0  # fix version for graff-ms
+
+# random pip packages
+ms_entropy
+spektral
+# git+https://github.com/plpla/DeepCCS#egg=DeepCCS  # -> requires manual install
+# go to repo and run `python core/setup.py install`
+
+# graff-ms
+pandarallel==1.6.4
+torch==1.12.1 #+cu113 
+torch_scatter==2.1.2 #+pt112+cu113 #+pt112cu113 --apparently none of these found? # fix this using pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+${CUDA}.html
+pytorch_lightning==1.6.*
+bioservices==1.11.2
+
+# git+https://github.com/stefanseefeld/faber#egg=faber  # requires manual install
+# go to repo and run `python setup.py install`
+
+# other
+# git+https://github.com/pnnl/darkchem#egg=darkchem
+
+# also `brew install gcc`

@@ -1,0 +1,52 @@
+name: idpp
+channels:
+  - conda-forge
+  - bioconda
+  - rdkit
+  - pytorch
+  - pyg
+  - nvidia
+  - dglteam
+  - defaults
+dependencies:
+  - python ==3.10
+  - cython
+  - flask>=1.1.2
+  - gunicorn>=20.0.4
+  - hyperopt>=0.2.3
+  - ipykernel
+  - keras
+  - lxml
+  - mamba
+  - matplotlib
+  - numpy>=1.18.1
+  - pandas
+  - pytables
+  - openbabel
+  - openpyxl
+  - rdkit>=2020.03.1.0
+  - snakemake
+  - statsmodels
+  - tabulate
+  - tensorflow
+  - scikit-learn>=0.22.2.post1
+  - scipy>=1.4.1
+  - seaborn
+  - tensorboardX>=2.0
+  - tqdm>=4.45.0
+  - umap-learn
+  - xlrd
+
+  # ms-pred / graff-ms
+  - pyteomics
+  - conda-forge::python-graphviz
+  - conda-forge::pygraphviz
+  # - pytorch-lightning
+  # - einops
+  # - ray-tune
+  # - boost
+  # - cudnn  # for cuda
+  - pip
+  - pip:
+    # - tensorflow-macos==2.9  # only needed for mac systems
+    - ms_entropy
