@@ -439,7 +439,7 @@ checkpoint run_cfmid:
     benchmark:
         join(".benchmarks/run_cfmid/{db}__{n}__{adduct}.tsv")
     singularity:
-        config["cfmid_path"]
+        "docker://wishartlab/cfmid"
     shell:
         """
         mkdir -p {output.dir}

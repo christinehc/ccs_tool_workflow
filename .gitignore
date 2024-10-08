@@ -9,7 +9,7 @@ workflow/.snakemake*
 .snakemake*
 
 # Mac
-.DS_Store
+*.DS_Store
 
 # slurm
 *.out

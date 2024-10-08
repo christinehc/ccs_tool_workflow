@@ -16,7 +16,7 @@ deepccs_path: /qfs/projects/idpp/repos/DeepCCS
 sigmaccs_path: /qfs/projects/idpp/repos/SigmaCCSNew
 darkchem_path: /qfs/projects/idpp/data/darkchem_networks
 c3sdb_path: /qfs/projects/idpp/repos/c3sdb
-cfmid_path: /qfs/projects/idpp/repos/cfmid/cfmid.sif
+
 
 # cfm-id params
 singularity-args: "--bind /qfs/projects/idpp/data/test_10:$HOME"
