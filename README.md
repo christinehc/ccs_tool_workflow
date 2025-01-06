@@ -76,3 +76,8 @@ reflect those of the United States Government or any agency thereof.
                                 for the
                    UNITED STATES DEPARTMENT OF ENERGY
                     under Contract DE-AC05-76RL01830
+
+
+# Related Repositories
+- [main identification probability analysis codebase](https://github.com/pnnl/idpp_main)
+- [retention time prediction model](https://github.com/pnnl/idpp_rtp)
