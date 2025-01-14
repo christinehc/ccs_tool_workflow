@@ -1,34 +1,39 @@
-# database chunking
+# Specify desired tools here
+tools: ["deepccs", "graffms", "sigmaccs", "darkchem", "c3sdb", "rtp"]
+
+# Repository Paths
+rtp_path: RTP_REPOSITORY_PATH
+deepccs_path: DEEPCCS_REPOSITORY_PATH
+sigmaccs_path: SIGMACCS_REPOSITORY_PATH
+darkchem_path: DARKCHEM_MODELS_PATH
+c3sdb_path: C3SDB_REPOSITORY_PATH
+
+# HPC envmodules
+# NOTE: use "" if no relevant module
+envmodule:
+  gcc: GCC_MODULE
+  cuda: CUDA_MODULE
+
+# Database Chunking
 db:
   filename: test_batch_size-316
   chunk_size: 25
 
-# general adduct types
+# Adducts to predict for all tools (minus CFM-ID)
 adducts: ["[M+H]+", "[M-H]-"]
 
-# specify desired tools
-tools: ["deepccs", "graffms", "sigmaccs", "darkchem", "c3sdb", "rtp"]
-
-# repo locations
-retip_data: /qfs/projects/idpp/properties/retip_data
-rtp_path: /qfs/projects/idpp/repos/rtp
-deepccs_path: /qfs/projects/idpp/repos/DeepCCS
-sigmaccs_path: /qfs/projects/idpp/repos/SigmaCCSNew
-darkchem_path: /qfs/projects/idpp/data/darkchem_networks
-c3sdb_path: /qfs/projects/idpp/repos/c3sdb
-
-
-# cfm-id params
-singularity-args: "--bind /qfs/projects/idpp/data/test_10:$HOME"
-use-singularity: TRUE
-
-# web server has many available adducts; CLI/docker only 2
+# CFM-ID Adducts
+# NOTE: Web server has many available adducts; CLI/docker only 2
 cfmid_adducts: ["[M+H]+", "[M-H]-"]
 
-# graff-ms params
+# Singularity Parameters (for CFM-ID)
+singularity-args: "--bind /PATH/TO/INPUT_DATA:$HOME"
+use-singularity: TRUE
+
+# GrAFF-MS Parameters
 collision_energy: [10.0, 20.0, 40.0]
 graffms:
-  repo_path: /qfs/projects/idpp/repos/graff-ms
+  repo_path: GRAFFMS_REPOSITORY_PATH
   input_path: 
   output_path:
   batch_size: 512
@@ -43,6 +48,6 @@ graffms:
   seed: 0
   ignore_errors: 1
 
-# rtp params
+# RTP Parameters
 fp_size: 2048
-rtp_model_path: /qfs/projects/idpp/data/rtp_models/test_SVM.pkl
+rtp_model_path: PATH_TO_RTP_MODEL.pkl

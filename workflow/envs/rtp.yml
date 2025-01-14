@@ -32,4 +32,3 @@ dependencies:
   - pip:
       - joblib==1.4.*
       - six==1.16.*
-prefix: /people/imal967/.conda/envs/rtp

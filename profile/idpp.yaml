@@ -1,5 +1,5 @@
 cluster:
-  mkdir -p /qfs/projects/idpp/batches_for_prediction/logs/{rule} &&
+  mkdir -p DATA_PATH/logs/{rule} &&
   sbatch
     --account={resources.account}
     --partition={resources.partition}
@@ -8,8 +8,8 @@ cluster:
     --job-name=smk-{rule}-{wildcards}
     --output=logs/{rule}/{rule}-{wildcards}-%j.out
 default-resources:
-  - account=idpp
-  - partition=shared
+  - account=YOUR_ACCOUNT
+  - partition=YOUR_PARTITION
   - nodes=1
   - ntasks=8
   - mem_mb=1000

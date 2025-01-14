@@ -1,17 +1,17 @@
 __default__:
-  name: idpp
-  account: idpp
+  name: YOUR_NAME
+  account: YOUR_ACCOUNT
   time: "12:00:00"
-  partition: shared
+  partition: YOUR_PARTITION
   nodes: 1
-  ntasks: 8  # 64/8 cores
+  ntasks: 8
 
 train_retip:
-  partition: slurm
+  partition: YOUR_PARTITION
   nodes: 1
   ntasks: 8
 
 retip:
-  partition: slurm
+  partition: YOUR_PARTITION
   nodes: 1
   ntasks: 8

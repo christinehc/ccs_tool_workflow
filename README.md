@@ -1,6 +1,6 @@
 # Installation
 
-First, install conda environment. Mamba is preferred, but conda can be used as well (but will be slower).
+First, install the main conda environment (`idpp`). Mamba is preferred, but conda can be used as well (but will be slower).
 
 `conda env create -f environment.yml`
 
@@ -13,10 +13,8 @@ Next, install pip dependencies:
 `pip install -r requirements.txt`
 
 Finally, manually install the following packages according to instructions in the home repos:
-- DeepCCS
 
-Retip dependencies will need to be installed in accordance with the instructions on https://www.retip.app/.
-Note that RTools is not required on non-Windows systems.
+- DeepCCS
 
 The above installation can be completed using `sbatch/hpc_setup.sbatch` if installing on Deception.
 
@@ -29,31 +27,44 @@ To install and use GrAFF-MS, use the associated environment spec.
 You can also use `sbatch/graff-ms_setup.sbatch` to install the environment on Deception.
 
 Then you will need to manually configure the path to the GrAFF-MS repository.
-(_Note: The repository paths specified in config/config.yaml should be correct and can be used as-is on Deception._)
 
 ## Extra Installation Notes
 
 - To install `torch_scatter`, first run `module load gcc/<newest_version>`
 - Note that environment specs exist for many of the tools in the workflow, but the only tool requiring the user to pre-install its corresponding environment is GrAFF-MS (also DeepCCS requires the package to be installed in the main environment `idpp`).
 
-## HPC Instructions
+# Getting Started
 
-HPC instructions are identical to the above, with the following changes for R packages specifically:
+Before running the workflow, you must edit the configuration files to match your system. The following files require manual updating:
 
-1. For R, make sure to load `module load R/<newest version>`
-2. Load gcc: `module load gcc/<newest version>`
-3. Load Java: `module load java/1.8.0_31`
-4. Run `R` on the command line and install packages using the R commands in the Retip instructions.
-5. Verify that `/share/apps/R/<newest version>/bin` is in your PATH variable with `echo $PATH`
-    - If not, run `export PATH=/share/apps/R/<newest version>/bin:$PATH`
+- config/cluster.yaml
+- config/config.yaml
+- profile/idpp.yaml
+
+All parameters that require updating have their values in all uppercase (e.g. in config/config.yaml, the parameter `rtp_path` should be updated by replacing the uppercase text with the specified information: `rtp_path: RTP_REPOSITORY_PATH` -> `rtp_path: /path/to/rtp/`).
+
+## HPC
+
+Our HPC setup assumes Slurm is the system for submitting jobs for the cluster. Slurm parameters (in config/cluster.yaml and profile/idpp.yaml) are detailed in the [official Slurm documentation](https://slurm.schedmd.com/sbatch.html).
 
 # Running the Workflow
 
+To run the workflow, simply use the [`snakemake` command](https://snakemake.readthedocs.io/en/stable/executing/cli.html#all-options). We recommend the following options to start:
+
+```bash
+snakemake --jobs <N_JOBS> --latency-wait <WAIT> --scheduler greedy --use-conda --use-envmodules --directory <INPUT_DIRECTORY> --configfile config/config.yaml --cluster-config config/cluster.yaml --cluster "sbatch -A {cluster.account} -t {cluster.time} -J {cluster.name} --ntasks-per-node {cluster.ntasks} -p {cluster.partition}"
+```
+
 ## Workflow Configuration
+
+Parameters for running the general workflow are in the config/config.yaml file.
 
 ## Cluster Configuration
 
+Parameters for running the general workflow are in the cluster/cluster.yaml file.
+
 ### Disclaimer:
+
 This material was prepared as an account of work sponsored by an agency of the
 United States Government.  Neither the United States Government nor the United
 States Department of Energy, nor Battelle, nor any of their employees, nor any
@@ -79,5 +90,5 @@ reflect those of the United States Government or any agency thereof.
 
 
 # Related Repositories
-- [main identification probability analysis codebase](https://github.com/pnnl/idpp_main)
-- [retention time prediction model](https://github.com/pnnl/idpp_rtp)
+- [Main identification probability analysis codebase](https://github.com/pnnl/idpp_main)
+- [Retention time prediction model](https://github.com/pnnl/idpp_rtp)
