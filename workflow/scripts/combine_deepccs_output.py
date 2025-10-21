@@ -1,6 +1,8 @@
 # imports
 import re
+
 import pandas as pd
+
 
 # define function to detect adduct charge from adduct name
 def get_adduct_charge(adduct):
@@ -61,6 +63,7 @@ def get_adduct_charge(adduct):
 
     return charge
 
+
 def format_adduct(adduct: str, z: int) -> str:
     """Apply [M+X]z format to adduct string.
 
@@ -75,14 +78,14 @@ def format_adduct(adduct: str, z: int) -> str:
     -------
     str
         Formatted adduct (e.g. "[M-H]-")
-    """    
+    """
     # ensure not already bracketed
     if "[" in adduct and "]" in adduct:
         return adduct
 
     if z == 0:
         return f"[{adduct}]"
-    
+
     # include charge information
     sign = "+" if z > 0 else "-"
     z = abs(z)
@@ -91,14 +94,21 @@ def format_adduct(adduct: str, z: int) -> str:
         return f"[{adduct}]{sign}"
     return f"[{adduct}]{z}{sign}"
 
+
 # need ccs, adduct_id, src_id
 data = list()
 for f, d in zip(snakemake.input.files, snakemake.input.data):
     input_data = pd.read_csv(d, sep="\t")
-    tmp = pd.read_csv(f).rename(columns={"Adducts": "adduct", "SMILES": "smi", "CCS_DeepCCS": "ccs"})
+    tmp = pd.read_csv(f).rename(
+        columns={"Adducts": "adduct", "SMILES": "smi", "CCS_DeepCCS": "ccs"}
+    )
     tmp["adduct_z"] = [get_adduct_charge(a) for a in tmp["adduct"]]
-    tmp["adduct"] = [format_adduct(a, z) for a, z in zip(tmp["adduct"], tmp["adduct_z"])]
-    tmp = tmp.merge(input_data, how="left", on=["smi", "adduct", "adduct_z"])
+    tmp["adduct"] = [
+        format_adduct(a, z) for a, z in zip(tmp["adduct"], tmp["adduct_z"])
+    ]
+    tmp = tmp.merge(
+        input_data, how="left", on=["smi", "adduct_id", "adduct", "adduct_z"]
+    )
     data.append(tmp)
 
 data = pd.concat(data, ignore_index=True)
