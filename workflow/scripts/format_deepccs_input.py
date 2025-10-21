@@ -42,6 +42,6 @@ data = data[
 data = data.dropna(subset="SMILES")
 
 # reduce cols to retip input format
-data = data[["SMILES", "Adducts"]]
+data = data[["SMILES", "Adducts", "adduct_id"]]
 data["Adducts"] = [a.split("[")[1].split("]")[0] for a in data["Adducts"]]
 data.to_csv(snakemake.output[0], index=False)
