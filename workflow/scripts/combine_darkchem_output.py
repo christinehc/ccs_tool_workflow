@@ -8,7 +8,7 @@ for f, d in zip(snakemake.input.files, snakemake.input.data):
     tmp = pd.read_csv(f, sep="\t")
     if "Unnamed: 0" in tmp.columns:
         tmp = tmp.drop(columns="Unnamed: 0")
-    tmp = tmp.rename(columns={"adductID": "adduct_id","darkchem":"ccs"})
+    tmp = tmp.rename(columns={"adductID": "adduct_id", "darkchem": "ccs"})
     tmp = tmp.merge(input_data, how="left", on=["adduct_id"])
     data.append(tmp)
 
