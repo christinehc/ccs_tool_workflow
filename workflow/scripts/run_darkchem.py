@@ -26,21 +26,24 @@ predicted_ccs = list()
 for adduct in snakemake.config["adducts"]:
     tmp = data[data["adduct"] == adduct]
 
-    # load models
-    model = darkchem.utils.load_model(MODEL_PATH[adduct])
-    x = np.array(
-        [darkchem.utils.struct2vec(smi) for smi in tmp["smi"]]
-    )  # extract only SMILES notation
-    # essentially what this does is that in a for loop, it will go over each SMILES notation and turn it into a numerical encoding of it and create a table where each row is a SMILES notation
+    if len(tmp) > 0:
+        # load models
+        model = darkchem.utils.load_model(MODEL_PATH[adduct])
+        x = np.array(
+            [darkchem.utils.struct2vec(smi) for smi in tmp["smi"]]
+        )  # extract only SMILES notation
+        # essentially what this does is that in a for loop, it will go over each SMILES notation and turn it into a numerical encoding of it and create a table where each row is a SMILES notation
 
-    # generate latent space
-    x_latent = model.encoder.predict(x)
+        # generate latent space
+        x_latent = model.encoder.predict(x)
 
-    # generate property predictions
-    y_pred = model.predictor.predict(x_latent)
+        # generate property predictions
+        y_pred = model.predictor.predict(x_latent)
 
-    predict_df = pd.DataFrame({"adductID": tmp["adduct_id"], "darkchem": y_pred[:, 1]})
-    predicted_ccs.append(predict_df)
+        predict_df = pd.DataFrame(
+            {"adductID": tmp["adduct_id"], "darkchem": y_pred[:, 1]}
+        )
+        predicted_ccs.append(predict_df)
 
 predicted_ccs = pd.concat(predicted_ccs, ignore_index=True)
 predicted_ccs.to_csv(
