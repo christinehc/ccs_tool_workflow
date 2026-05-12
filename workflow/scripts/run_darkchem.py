@@ -15,6 +15,7 @@ MODEL_PATH = {
     "[M+H]+": join(snakemake.config["darkchem_path"], "N7b_[M+H]"),
     "[M-H]-": join(snakemake.config["darkchem_path"], "N7b_[M-H]"),
 }
+
 # DATA_PATH = "./data/test_batch_size-10.tsv"  # some tsv file
 DATA_PATH = snakemake.input[0]
 
@@ -27,10 +28,12 @@ for adduct in snakemake.config["adducts"]:
     tmp = data[data["adduct"] == adduct]
 
     if len(tmp) > 0:
+        canonicalized = darkchem.preprocess.canonicalize(tmp["smi"].values)
+
         # load models
         model = darkchem.utils.load_model(MODEL_PATH[adduct])
         x = np.array(
-            [darkchem.utils.struct2vec(smi) for smi in tmp["smi"]]
+            [darkchem.utils.struct2vec(smi) for smi in canonicalized]
         )  # extract only SMILES notation
         # essentially what this does is that in a for loop, it will go over each SMILES notation and turn it into a numerical encoding of it and create a table where each row is a SMILES notation
 
