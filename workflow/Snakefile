@@ -69,7 +69,7 @@ def define_input_from_tools(wildcards):
 
 # Clean up outfiles after successful runs
 onsuccess:
-    shell("mv *.out ../_outfiles/.")
+    shell("mv *.out ../.outfiles/.")
     print("Workflow finished successfully.")
 
 
